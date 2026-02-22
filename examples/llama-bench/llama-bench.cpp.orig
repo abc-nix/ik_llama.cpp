@@ -1522,9 +1522,14 @@ struct test {
             "n_threads", "type_k", "type_v",
             "n_gpu_layers", "split_mode",
             "main_gpu", "no_kv_offload", "flash_attn", "mla_attn", "attn_max_batch", "ser", "reuse",
+<<<<<<< HEAD
             "tensor_split", "use_mmap", "use_direct_io", "embeddings",
             "repack", "mqkv", "muge", "fused_moe", "grouped_er",
+            "no_fused_up_gate", "use_thp", "no_ooae", "rcache", "sas", "cuda_params", "override_tensor",
+=======
+            "tensor_split", "use_mmap", "embeddings", "repack", "mqkv", "muge", "fused_moe", "grouped_er",
             "no_fused_up_gate", "use_thp", "no_ooae", "rcache", "sas", "fdn", "cuda_params", "override_tensor",
+>>>>>>> c77ec4b8 (Fused delta-net (#1315))
             "n_prompt", "n_gen", "test_time",
             "avg_ns", "stddev_ns",
             "avg_ts", "stddev_ts", "test",
@@ -1717,6 +1722,9 @@ struct markdown_printer : public printer {
         if (field == "sas") {
             return 3;
         }
+        if (field == "fdn") {
+            return 4;
+        }
         if (field == "use_thp") {
             return 3;
         }
@@ -1792,6 +1800,9 @@ struct markdown_printer : public printer {
         }
         if (field == "sas") {
             return "sas";
+        }
+        if (field == "fdn") {
+            return "fdn";
         }
         if (field == "use_thp") {
             return "thp";
@@ -1905,6 +1916,9 @@ struct markdown_printer : public printer {
         }
         if (params.sas != cmd_params_defaults.sas) {
             fields.emplace_back("sas");
+        }
+        if (params.fdn != cmd_params_defaults.fdn) {
+            fields.emplace_back("fdn");
         }
         if (params.muge != cmd_params_defaults.muge) {
             fields.emplace_back("muge");
