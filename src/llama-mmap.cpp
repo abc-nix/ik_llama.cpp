@@ -301,22 +301,33 @@ struct llama_file::impl {
         off_t offset_from_alignment = offset - aligned_offset;
         size_t bytes_to_read = (offset_from_alignment + size + alignment - 1) & ~(alignment - 1);
 
-        void * raw_buffer = nullptr;
-        int ret = posix_memalign(&raw_buffer, alignment, bytes_to_read);
-        if (ret != 0) {
-            throw std::runtime_error(format("posix_memalign failed with error %d", ret));
+        // MONOTONIC CACHE: Stores the buffer and the alignment it satisfies
+        static thread_local struct {
+            void*  ptr = nullptr;
+            size_t buf_size = 0;
+            size_t buf_align = 0;
+        } cache;
+
+        if (!cache.ptr || cache.buf_size < bytes_to_read || cache.buf_align < alignment) {
+            // Free old buffer if exists
+            if (cache.ptr) ::free(cache.ptr);
+            //~ LLAMA_LOG_INFO("%s: using posix_memalign cache\n", __func__);
+            void* raw = nullptr;
+            int ret = posix_memalign(&raw, alignment, bytes_to_read);
+            if (ret != 0) {
+                throw std::runtime_error(format("posix_memalign failed with error %d", ret));
+            }
+            cache.ptr = raw;
+            cache.buf_size = bytes_to_read;
+            cache.buf_align = alignment; // Remember what we got
         }
 
-        struct aligned_buffer_deleter {
-            void operator()(void * p) const { free(p); }
-        };
-        std::unique_ptr<void, aligned_buffer_deleter> buffer(raw_buffer);
-
+        // Use the cached buffer (already aligned to at least `alignment`)
         seek(aligned_offset, SEEK_SET);
-        read_raw_unsafe(buffer.get(), bytes_to_read);
+        read_raw_unsafe(cache.ptr, bytes_to_read);
+        //~ LLAMA_LOG_INFO("%s: use the cached buffer\n", __func__);
 
-        uintptr_t actual_data = reinterpret_cast<uintptr_t>(buffer.get()) + offset_from_alignment;
-        memcpy(dest, reinterpret_cast<void *>(actual_data), size);
+        memcpy(dest, static_cast<char*>(cache.ptr) + offset_from_alignment, size);
     }
 
     void read_raw(void * ptr, size_t len) {
