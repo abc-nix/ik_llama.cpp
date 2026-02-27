@@ -331,6 +331,7 @@ struct llama_file::impl {
     }
 
     void read_raw(void * ptr, size_t len) {
+        if (len == 0) return;
         if (has_direct_io()) {
             read_aligned_chunk(ptr, len);
         } else {
